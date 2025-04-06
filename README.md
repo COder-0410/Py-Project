@@ -12,7 +12,7 @@ This is a simple chatbot built using the **Transformers** library and powered by
 
 ## Model Info:
  Used: [TinyLlama](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0)
- This model is lightweight and ideal for running on resource-constrained environments while still providing strong performance on chat tasks.
+ <br><br>This model is lightweight and ideal for running on resource-constrained environments while still providing strong performance on chat tasks.
 
 ## Requirements
 
