@@ -325,22 +325,35 @@ if __name__ == '__main__':
     
     # Start Flask app and open web browser.
     port = int(os.environ.get("PORT", 5000))
-    def open_browser():
-        time.sleep(2)
+    logger = logging.getLogger(__name__)
+
+    def is_wsl():
+        try:
+            with open("/proc/version", "r") as f:
+                return "microsoft" in f.read().lower()
+        except FileNotFoundError:
+            return False
+
+    def open_browser(port):
         url = f"http://localhost:{port}"
-        if "WSL2" in os.uname().release:
+
+        # Try opening with PowerShell only if on Windows
+        if platform.system() == "Windows" and not is_wsl():
             try:
-                subprocess.run(["powershell.exe", "start", url])
+                subprocess.run(["powershell.exe", "start", url], check=True)
+                return
             except Exception as e:
-                logger.warning(f"Could not open browser: {e}")
-        else:
-            try:
-                webbrowser.open(f"http://localhost:{port}")
-            except Exception as e:
-                logger.warning(f"Could not open browser: {e}")
+                logger.warning(f"Could not open browser with PowerShell: {e}")
+
+        #Fallback to Python's webbrowser
+        try:
+            webbrowser.open(url)
+        except Exception as e:
+            logger.warning(f"Could not open browser with webbrowser: {e}")
 
 
-    threading.Thread(target=open_browser).start()
+
+    threading.Thread(target=open_browser, args=(port,), daemon=True).start().start()
 
     debug = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
     
