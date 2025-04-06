@@ -10,7 +10,7 @@ import gc
 import os
 import logging
 from logging.handlers import RotatingFileHandler
-import json
+import platform
 from werkzeug.middleware.proxy_fix import ProxyFix
 import webbrowser
 import subprocess
@@ -353,7 +353,7 @@ if __name__ == '__main__':
 
 
 
-    threading.Thread(target=open_browser, args=(port,), daemon=True).start().start()
+    threading.Thread(target=open_browser, args=(port,), daemon=True).start()
 
     debug = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
     
