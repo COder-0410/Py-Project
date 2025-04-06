@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>TinyLlama Chat</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32" />
+    <link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+    <style>
+        :root {
+            --bg: #f5f5f5;
+            --text: #333;
+            --container-bg: white;
+            --border: #ddd;
+            --user-msg-bg: #e3f2fd;
+            --assistant-msg-bg: #f5f5f5;
+            --textarea-bg: #fff;
+            --textarea-border: #ddd;
+            --button-bg: #2196f3;
+            --button-hover: #1976d2;
+            --button-disabled: #ccc;
+            --button-disabled-text: #666;
+            --status-bg: #e8f5e9;
+            --code-bg: #f8f9fa;
+            --code-text: #000;
+            --table-border: #ddd;
+            --table-th-bg: #f8f9fa;
+            --model-info-text: #666;
+        }
+
+        body.dark {
+            --bg: #121212;
+            --text: #e0e0e0;
+            --container-bg: #1e1e1e;
+            --border: #333;
+            --user-msg-bg: #0d47a1;
+            --assistant-msg-bg: #2c2c2c;
+            --textarea-bg: #2c2c2c;
+            --textarea-border: #555;
+            --button-bg: #2196f3;
+            --button-hover: #1976d2;
+            --button-disabled: #555;
+            --button-disabled-text: #888;
+            --status-bg: #2e7d32;
+            --code-bg: #272727;
+            --code-text: #f8f8f2;
+            --table-border: #444;
+            --table-th-bg: #2a2a2a;
+            --model-info-text: #aaa;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg);
+            color: var(--text);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background-color: var(--button-bg);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 15px;
+            cursor: pointer;
+            z-index: 9999;
+            transition: background-color 0.3s;
+        }
+
+        .theme-toggle:hover {
+            background-color: var(--button-hover);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        #loadingScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #444;
+            border-top: 5px solid var(--button-bg);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        .loading-text {
+            font-size: 24px;
+            color: var(--button-bg);
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .loading-status {
+            font-size: 16px;
+            color: var(--model-info-text);
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #mainContent {
+            display: none;
+        }
+
+        .chat-container {
+            height: 60vh;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+            background-color: var(--container-bg);
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .user-message {
+            background-color: var(--user-msg-bg);
+            color: white;
+            margin-left: 20%;
+            border-radius: 15px 15px 0 15px;
+        }
+
+        .assistant-message {
+            background-color: var(--assistant-msg-bg);
+            margin-right: 20%;
+            border-radius: 15px 15px 15px 0;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        textarea {
+            flex-grow: 1;
+            padding: 10px;
+            background-color: var(--textarea-bg);
+            border: 1px solid var(--textarea-border);
+            border-radius: 4px;
+            resize: vertical;
+            min-height: 50px;
+            font-family: inherit;
+            color: var(--text);
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: var(--button-bg);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--button-hover);
+        }
+
+        button:disabled {
+            background-color: var(--button-disabled);
+            color: var(--button-disabled-text);
+            cursor: not-allowed;
+        }
+
+        .status-container {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: var(--status-bg);
+            color: white;
+            display: none;
+        }
+
+        .message-content pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        .message-content code {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        .message-content img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .message-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 10px 0;
+            border: 1px solid var(--table-border);
+        }
+
+        .message-content th,
+        .message-content td {
+            border: 1px solid var(--table-border);
+            padding: 8px;
+            text-align: left;
+        }
+
+        .message-content th {
+            background-color: var(--table-th-bg);
+        }
+
+        .model-info {
+            font-size: 12px;
+            color: var(--model-info-text);
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .action-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body class="dark">
+    <button class="theme-toggle" onclick="toggleTheme()">🌙 Toggle Theme</button>
+
+    <div id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading TinyLlama Model</div>
+        <div class="loading-status" id="loadingStatus">Initializing...</div>
+    </div>
+
+    <div id="mainContent" class="container">
+        <h1>TinyLlama Chat</h1>
+        <div class="chat-container" id="chatContainer"></div>
+        <div class="input-container">
+            <textarea id="userInput" placeholder="Type your message here..." rows="3"></textarea>
+            <button id="sendButton" onclick="sendMessage()">Send</button>
+        </div>
+        <div class="action-buttons">
+            <button onclick="clearChat()">Clear Chat</button>
+            <button onclick="checkAndDisplayStatus()">Check Status</button>
+        </div>
+        <div class="status-container" id="statusContainer">
+            <p id="statusText"></p>
+        </div>
+        <div class="model-info">Powered by TinyLlama (1.1B) - A lightweight language model</div>
+    </div>
+
+    <script>
+        // Theme toggle
+        function toggleTheme() {
+            const isDark = document.body.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+
+        (function () {
+            const theme = localStorage.getItem('theme');
+            if (theme === 'light') { 
+                document.body.classList.remove('dark');
+            } 
+            else {
+                document.body.classList.add('dark');
+            };
+        })();
+
+        marked.setOptions({
+            highlight: function(code, lang) {
+                if (lang && hljs.getLanguage(lang)) {
+                    return hljs.highlight(code, { language: lang }).value;
+                }
+                return hljs.highlightAuto(code).value;
+            },
+            breaks: true,
+            gfm: true,
+            sanitize: false
+        });
+
+        let sessionId = null;
+        let modelLoaded = false;
+
+        const chatContainer = document.getElementById('chatContainer');
+        const userInput = document.getElementById('userInput');
+        const sendButton = document.getElementById('sendButton');
+        const statusContainer = document.getElementById('statusContainer');
+        const statusText = document.getElementById('statusText');
+        const loadingScreen = document.getElementById('loadingScreen');
+        const loadingStatus = document.getElementById('loadingStatus');
+        const mainContent = document.getElementById('mainContent');
+
+        checkModelStatus();
+
+        function updateLoadingStatus(message) {
+            loadingStatus.textContent = message;
+        }
+
+        function checkModelStatus() {
+            updateLoadingStatus('Checking model status...');
+            fetch('/status')
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.model_loaded) {
+                        updateLoadingStatus('Model is still loading...');
+                        setTimeout(checkModelStatus, 2000);
+                    } else {
+                        modelLoaded = true;
+                        showMainInterface();
+                    }
+                })
+                .catch(() => {
+                    updateLoadingStatus('Error connecting to server. Retrying...');
+                    setTimeout(checkModelStatus, 5000);
+                });
+        }
+
+        function showMainInterface() {
+            loadingScreen.style.transition = 'opacity 0.5s';
+            loadingScreen.style.opacity = '0';
+            mainContent.style.display = 'block';
+            mainContent.style.opacity = '0';
+            mainContent.style.transition = 'opacity 0.5s';
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+                mainContent.style.opacity = '1';
+                appendMessage("Hello! I'm TinyLlama, a small AI assistant. How can I help you today?", false);
+            }, 500);
+            sendButton.disabled = false;
+        }
+
+        function appendMessage(content, isUser) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'assistant-message'}`;
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.innerHTML = isUser ? content : marked.parse(content);
+            messageDiv.appendChild(contentDiv);
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+            sendButton.disabled = true;
+            userInput.value = '';
+            appendMessage(message, true);
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message, session_id: sessionId })
+                });
+                const data = await response.json();
+                if (data.status === 'success') {
+                    sessionId = data.session_id;
+                    appendMessage(data.response, false);
+                } else {
+                    appendMessage('Error: ' + data.message, false);
+                }
+            } catch {
+                appendMessage('Error: Failed to send message.', false);
+            }
+            sendButton.disabled = false;
+        }
+
+        async function clearChat() {
+            if (sessionId) {
+                await fetch('/clear_session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: sessionId })
+                });
+            }
+            chatContainer.innerHTML = '';
+            sessionId = null;
+        }
+
+        async function checkAndDisplayStatus() {
+            try {
+                const res = await fetch('/status');
+                const data = await res.json();
+                let html = `
+                    <p><strong>Model:</strong> ${data.model_name}</p>
+                    <p><strong>Active Sessions:</strong> ${data.active_sessions}</p>
+                    <p><strong>GPU Available:</strong> ${data.gpu_available ? 'Yes' : 'No'}</p>
+                `;
+                if (data.gpu_available) {
+                    html += `
+                        <p><strong>GPU Name:</strong> ${data.gpu_name}</p>
+                        <p><strong>GPU Memory Allocated:</strong> ${data.gpu_memory_allocated}</p>
+                    `;
+                }
+                statusText.innerHTML = html;
+                statusContainer.style.display = 'block';
+            } catch {
+                statusText.textContent = 'Error retrieving status.';
+                statusContainer.style.display = 'block';
+            }
+        }
+
+        userInput.addEventListener('keypress', e => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        setInterval(() => {
+            if (modelLoaded) {
+                fetch('/status')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (!data.model_loaded) location.reload();
+                    })
+                    .catch(console.error);
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

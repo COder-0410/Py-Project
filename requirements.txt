@@ -1,0 +1,6 @@
+flask>=2.3.0
+flask-cors>=3.0.10
+torch
+transformers>=4.38.0
+gunicorn
+werkzeug
