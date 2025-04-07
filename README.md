@@ -2,7 +2,7 @@
 
 This is a simple chatbot built using the **Transformers** library and powered by the **TinyLLaMA-1.1B-Chat-v1.0** model. 
 
-<b> It was as part of my academic assignment, creating a web chatbot application using </b>```Flask```<b>. </b>
+<b><i>Note: It was as part of my academic assignment, to create a web chatbot application using </b>```Flask```<b>. </b></i>
 
 ## Features
 
