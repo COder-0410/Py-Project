@@ -1,15 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TinyLlama Chat</title>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32">
+    <link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
-    <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32" />
-    <link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
     <style>
         :root {
             --bg: #f5f5f5;
@@ -30,9 +28,12 @@
             --table-border: #ddd;
             --table-th-bg: #f8f9fa;
             --model-info-text: #666;
+            --radio-border: #ddd;
+            --radio-selected: #2196f3;
+            --radio-selected-bg: #e3f2fd;
         }
 
-        body.dark {
+        .dark {
             --bg: #121212;
             --text: #e0e0e0;
             --container-bg: #1e1e1e;
@@ -41,8 +42,6 @@
             --assistant-msg-bg: #2c2c2c;
             --textarea-bg: #2c2c2c;
             --textarea-border: #555;
-            --button-bg: #2196f3;
-            --button-hover: #1976d2;
             --button-disabled: #555;
             --button-disabled-text: #888;
             --status-bg: #2e7d32;
@@ -51,10 +50,13 @@
             --table-border: #444;
             --table-th-bg: #2a2a2a;
             --model-info-text: #aaa;
+            --radio-border: #555;
+            --radio-selected: #90caf9;
+            --radio-selected-bg: #0d47a1;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             line-height: 1.6;
             margin: 0;
             padding: 20px;
@@ -73,8 +75,7 @@
             border-radius: 20px;
             padding: 8px 15px;
             cursor: pointer;
-            z-index: 9999;
-            transition: background-color 0.3s;
+            z-index: 100;
         }
 
         .theme-toggle:hover {
@@ -102,6 +103,7 @@
             justify-content: center;
             align-items: center;
             z-index: 1000;
+            transition: opacity 0.5s;
         }
 
         .loading-spinner {
@@ -112,6 +114,11 @@
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         .loading-text {
@@ -128,13 +135,10 @@
             text-align: center;
         }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
         #mainContent {
             display: none;
+            opacity: 0;
+            transition: opacity 0.5s;
         }
 
         .chat-container {
@@ -166,7 +170,24 @@
             border-radius: 15px 15px 15px 0;
         }
 
+        .system-message {
+            background-color: rgba(128, 128, 128, 0.2);
+            color: var(--text);
+            font-style: italic;
+            text-align: center;
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 0.9em;
+            margin: 10px 15%;
+        }
+
         .input-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .input-row {
             display: flex;
             gap: 10px;
         }
@@ -221,7 +242,7 @@
         }
 
         .message-content code {
-            font-family: 'Courier New', Courier, monospace;
+            font-family: monospace;
             background-color: var(--code-bg);
             color: var(--code-text);
             padding: 2px 4px;
@@ -263,10 +284,145 @@
             justify-content: space-between;
             margin-top: 10px;
         }
+
+        /* Response length selector styles */
+        .response-options {
+            display: flex;
+            margin-bottom: 10px;
+            justify-content: center;
+            margin-top: 10px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .response-option {
+            display: flex;
+            align-items: center;
+            margin-right: 10px;
+            cursor: pointer;
+            padding: 6px 12px;
+            border: 1px solid var(--radio-border);
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .response-option:hover {
+            background-color: var(--radio-selected-bg);
+        }
+
+        .response-option.selected {
+            background-color: var(--radio-selected-bg);
+            border-color: var(--radio-selected);
+        }
+
+        .response-option input {
+            margin-right: 5px;
+        }
+
+        /* Sessions panel styles */
+        #sessionsPanelBtn {
+            margin-left: 10px;
+        }
+
+        #sessionsPanel {
+            position: fixed;
+            top: 0;
+            right: -500px;
+            width: 300px;
+            height: 100%;
+            background-color: var(--container-bg);
+            box-shadow: -2px 0 5px rgba(0, 0, 0, 0.2);
+            transition: right 0.3s ease;
+            padding: 20px;
+            overflow-y: auto;
+            z-index: 1000;
+            color: var(--text);
+        }
+
+        #sessionsPanel.open {
+            right: 0;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .close-panel {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text);
+        }
+
+        .session-item {
+            padding: 12px;
+            margin-bottom: 12px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .session-item:hover {
+            background-color: var(--assistant-msg-bg);
+            transform: translateX(-3px);
+        }
+
+        .current-session {
+            border-left: 3px solid var(--button-bg);
+            background-color: rgba(33, 150, 243, 0.1);
+        }
+
+        /* Settings section styling */
+        .settings-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .settings-title {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+            border-bottom: 1px dotted var(--text);
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: var(--container-bg);
+            color: var(--text);
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
     </style>
 </head>
 <body class="dark">
-    <button class="theme-toggle" onclick="toggleTheme()">🌙 Toggle Theme</button>
+    <button class="theme-toggle" id="themeToggle">🌙 Toggle Theme</button>
 
     <div id="loadingScreen">
         <div class="loading-spinner"></div>
@@ -277,13 +433,34 @@
     <div id="mainContent" class="container">
         <h1>TinyLlama Chat</h1>
         <div class="chat-container" id="chatContainer"></div>
+        
+        <div class="response-options">
+            <div class="response-option selected" data-length="medium">
+                <input type="radio" name="responseLength" id="medium" value="medium" checked>
+                <label for="medium">Standard</label>
+            </div>
+            <div class="response-option" data-length="short">
+                <input type="radio" name="responseLength" id="short" value="short">
+                <label for="short">Brief</label>
+            </div>
+            <!-- Removed the "Detailed" option -->
+            <div class="tooltip">ℹ️
+                <span class="tooltiptext" id="lengthTooltip">Select how detailed you want TinyLlama's responses to be</span>
+            </div>
+        </div>
+        
         <div class="input-container">
             <textarea id="userInput" placeholder="Type your message here..." rows="3"></textarea>
-            <button id="sendButton" onclick="sendMessage()">Send</button>
+            <div class="input-row">
+                <button id="sendButton" disabled>Send</button>
+            </div>
         </div>
         <div class="action-buttons">
-            <button onclick="clearChat()">Clear Chat</button>
-            <button onclick="checkAndDisplayStatus()">Check Status</button>
+            <div>
+                <button id="clearButton">Clear Chat</button>
+                <button id="sessionsPanelBtn">Sessions</button>
+            </div>
+            <button id="statusButton">Check Status</button>
         </div>
         <div class="status-container" id="statusContainer">
             <p id="statusText"></p>
@@ -291,23 +468,42 @@
         <div class="model-info">Powered by TinyLlama (1.1B) - A lightweight language model</div>
     </div>
 
+    <!-- Sessions Side Panel -->
+    <div id="sessionsPanel">
+        <div class="panel-header">
+            <h2>Active Sessions</h2>
+            <button class="close-panel" id="closePanelBtn">&times;</button>
+        </div>
+        <div id="sessionsList"></div>
+        <div class="settings-section">
+            <div class="settings-title">Response Settings</div>
+            <div id="responseSettings"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
     <script>
-        // Theme toggle
-        function toggleTheme() {
-            const isDark = document.body.classList.toggle('dark');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-        }
+        // Improve performance by accessing DOM elements once
+        const themeToggle = document.getElementById('themeToggle');
+        const chatContainer = document.getElementById('chatContainer');
+        const userInput = document.getElementById('userInput');
+        const sendButton = document.getElementById('sendButton');
+        const clearButton = document.getElementById('clearButton');
+        const statusButton = document.getElementById('statusButton');
+        const statusContainer = document.getElementById('statusContainer');
+        const statusText = document.getElementById('statusText');
+        const loadingScreen = document.getElementById('loadingScreen');
+        const loadingStatus = document.getElementById('loadingStatus');
+        const mainContent = document.getElementById('mainContent');
+        const sessionsPanelBtn = document.getElementById('sessionsPanelBtn');
+        const sessionsPanel = document.getElementById('sessionsPanel');
+        const closePanelBtn = document.getElementById('closePanelBtn');
+        const sessionsList = document.getElementById('sessionsList');
+        const responseSettings = document.getElementById('responseSettings');
+        const responseOptions = document.querySelectorAll('.response-option');
 
-        (function () {
-            const theme = localStorage.getItem('theme');
-            if (theme === 'light') { 
-                document.body.classList.remove('dark');
-            } 
-            else {
-                document.body.classList.add('dark');
-            };
-        })();
-
+        // Init marked with better options
         marked.setOptions({
             highlight: function(code, lang) {
                 if (lang && hljs.getLanguage(lang)) {
@@ -316,23 +512,69 @@
                 return hljs.highlightAuto(code).value;
             },
             breaks: true,
-            gfm: true,
-            sanitize: false
+            gfm: true
         });
 
+        // Application state
         let sessionId = null;
         let modelLoaded = false;
+        let currentResponseLength = 'medium';
 
-        const chatContainer = document.getElementById('chatContainer');
-        const userInput = document.getElementById('userInput');
-        const sendButton = document.getElementById('sendButton');
-        const statusContainer = document.getElementById('statusContainer');
-        const statusText = document.getElementById('statusText');
-        const loadingScreen = document.getElementById('loadingScreen');
-        const loadingStatus = document.getElementById('loadingStatus');
-        const mainContent = document.getElementById('mainContent');
+        // Initialize theme based on saved preference
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'light') {
+            document.body.classList.remove('dark');
+        }
+        
+        // Event listeners using delegation when possible
+        themeToggle.addEventListener('click', toggleTheme);
+        sendButton.addEventListener('click', sendMessage);
+        clearButton.addEventListener('click', clearChat);
+        statusButton.addEventListener('click', checkAndDisplayStatus);
+        userInput.addEventListener('keypress', handleKeyPress);
+        sessionsPanelBtn.addEventListener('click', toggleSessionsPanel);
+        closePanelBtn.addEventListener('click', closeSessionsPanel);
 
+        // Response length selection
+        responseOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                responseOptions.forEach(opt => opt.classList.remove('selected'));
+                this.classList.add('selected');
+                const radio = this.querySelector('input');
+                radio.checked = true;
+                currentResponseLength = this.dataset.length;
+            });
+        });
+
+        // Add click event listener to close the panel when clicking outside
+        document.addEventListener('click', function(event) {
+            // If click is outside the panel and the panel is open
+            if (sessionsPanel.classList.contains('open') && 
+                !sessionsPanel.contains(event.target) && 
+                event.target !== sessionsPanelBtn) {
+                closeSessionsPanel();
+            }
+        });
+
+        // Add transition end listener
+        sessionsPanel.addEventListener('transitionend', function() {
+            if (!sessionsPanel.classList.contains('open')) {
+                // Ensure it's fully hidden after transition completes
+                sessionsPanel.style.right = '-500px';
+            }
+        });
+
+        // Check model status on load
         checkModelStatus();
+
+        // Load response settings on startup
+        fetchResponseSettings();
+
+        // Helper functions
+        function toggleTheme() {
+            const isDark = document.body.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
 
         function updateLoadingStatus(message) {
             loadingStatus.textContent = message;
@@ -358,25 +600,35 @@
         }
 
         function showMainInterface() {
-            loadingScreen.style.transition = 'opacity 0.5s';
             loadingScreen.style.opacity = '0';
             mainContent.style.display = 'block';
-            mainContent.style.opacity = '0';
-            mainContent.style.transition = 'opacity 0.5s';
+            
             setTimeout(() => {
                 loadingScreen.style.display = 'none';
                 mainContent.style.opacity = '1';
                 appendMessage("Hello! I'm TinyLlama, a small AI assistant. How can I help you today?", false);
+                sendButton.disabled = false;
             }, 500);
-            sendButton.disabled = false;
         }
 
-        function appendMessage(content, isUser) {
+        function appendMessage(content, isUser, isSystem = false) {
             const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isUser ? 'user-message' : 'assistant-message'}`;
+            
+            if (isSystem) {
+                messageDiv.className = 'message system-message';
+            } else {
+                messageDiv.className = `message ${isUser ? 'user-message' : 'assistant-message'}`;
+            }
+            
             const contentDiv = document.createElement('div');
             contentDiv.className = 'message-content';
-            contentDiv.innerHTML = isUser ? content : marked.parse(content);
+            
+            if (isSystem) {
+                contentDiv.textContent = content;
+            } else {
+                contentDiv.innerHTML = isUser ? content : marked.parse(content);
+            }
+            
             messageDiv.appendChild(contentDiv);
             chatContainer.appendChild(messageDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -385,71 +637,245 @@
         async function sendMessage() {
             const message = userInput.value.trim();
             if (!message) return;
+            
             sendButton.disabled = true;
             userInput.value = '';
             appendMessage(message, true);
+            
             try {
                 const response = await fetch('/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message, session_id: sessionId })
+                    body: JSON.stringify({
+                        message, 
+                        session_id: sessionId,
+                        response_length: currentResponseLength
+                    })
                 });
+                
                 const data = await response.json();
                 if (data.status === 'success') {
                     sessionId = data.session_id;
                     appendMessage(data.response, false);
+                    
+                    // Update sessions list if panel is open
+                    if (sessionsPanel.classList.contains('open')) {
+                        fetchSessions();
+                    }
                 } else {
                     appendMessage('Error: ' + data.message, false);
                 }
-            } catch {
+            } catch (error) {
                 appendMessage('Error: Failed to send message.', false);
+            } finally {
+                sendButton.disabled = false;
             }
-            sendButton.disabled = false;
         }
 
         async function clearChat() {
             if (sessionId) {
-                await fetch('/clear_session', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ session_id: sessionId })
-                });
+                try {
+                    await fetch('/clear_session', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ session_id: sessionId })
+                    });
+                } catch (error) {
+                    console.error('Failed to clear session:', error);
+                }
             }
+            
             chatContainer.innerHTML = '';
             sessionId = null;
+            appendMessage("Chat cleared. How can I help you?", false);
+            
+            // Update sessions list if panel is open
+            if (sessionsPanel.classList.contains('open')) {
+                fetchSessions();
+            }
         }
 
         async function checkAndDisplayStatus() {
             try {
                 const res = await fetch('/status');
                 const data = await res.json();
+                
                 let html = `
                     <p><strong>Model:</strong> ${data.model_name}</p>
                     <p><strong>Active Sessions:</strong> ${data.active_sessions}</p>
                     <p><strong>GPU Available:</strong> ${data.gpu_available ? 'Yes' : 'No'}</p>
                 `;
+                
                 if (data.gpu_available) {
                     html += `
                         <p><strong>GPU Name:</strong> ${data.gpu_name}</p>
                         <p><strong>GPU Memory Allocated:</strong> ${data.gpu_memory_allocated}</p>
                     `;
                 }
+                
                 statusText.innerHTML = html;
                 statusContainer.style.display = 'block';
-            } catch {
+            } catch (error) {
                 statusText.textContent = 'Error retrieving status.';
                 statusContainer.style.display = 'block';
             }
         }
 
-        userInput.addEventListener('keypress', e => {
+        function handleKeyPress(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendMessage();
             }
-        });
+        }
 
-        setInterval(() => {
+        // Improved functions for sessions panel
+        function toggleSessionsPanel(event) {
+            if (event) {
+                event.stopPropagation(); // Prevent propagation to document listener
+            }
+            
+            if (sessionsPanel.classList.contains('open')) {
+                closeSessionsPanel();
+            } else {
+                sessionsPanel.classList.add('open');
+                sessionsPanel.style.right = '0';
+                fetchSessions();
+            }
+        }
+
+        function closeSessionsPanel() {
+            sessionsPanel.classList.remove('open');
+            sessionsPanel.style.right = '-500px';
+        }
+
+        async function fetchSessions() {
+            try {
+                const response = await fetch('/sessions');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    displaySessions(data.sessions);
+                } else {
+                    sessionsList.innerHTML = '<p>Error loading sessions</p>';
+                }
+            } catch (error) {
+                sessionsList.innerHTML = '<p>Failed to fetch sessions</p>';
+                console.error('Error fetching sessions:', error);
+            }
+        }
+
+        function displaySessions(sessions) {
+            sessionsList.innerHTML = '';
+            
+            if (!sessions || Object.keys(sessions).length === 0) {
+                sessionsList.innerHTML = '<p>No active sessions</p>';
+                return;
+            }
+            
+            Object.entries(sessions).forEach(([sid, info]) => {
+                const sessionDiv = document.createElement('div');
+                sessionDiv.className = `session-item ${sid === sessionId ? 'current-session' : ''}`;
+                
+                const timeAgo = info.last_active ? formatTimeAgo(new Date(info.last_active)) : 'Unknown';
+                
+                sessionDiv.innerHTML = `
+                    <div><strong>Messages:</strong> ${info.message_count || 0}</div>
+                    <div><strong>Last active:</strong> ${timeAgo}</div>
+                    <div><small>${info.expires_in || 'No expiration'}</small></div>
+                `;
+                
+                // Make sure the session switching works
+                sessionDiv.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent event from bubbling up to document
+                    
+                    if (sid !== sessionId) {
+                        if (confirm('Switch to this session? Current chat will be preserved but inactive.')) {
+                            switchToSession(sid);
+                        }
+                    } else {
+                        // If it's the current session, just close the panel
+                        closeSessionsPanel();
+                    }
+                });
+                
+                sessionsList.appendChild(sessionDiv);
+            });
+        }
+
+        function formatTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            
+            if (seconds < 60) return `${seconds} seconds ago`;
+            if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+            if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+            return `${Math.floor(seconds / 86400)} days ago`;
+        }
+
+        async function switchToSession(sid) {
+            try {
+                // Optionally, fetch session history here if you want to show previous messages
+                
+                sessionId = sid;
+                chatContainer.innerHTML = '';
+                appendMessage("Switched to existing session. Previous messages aren't shown.", true, true);
+                appendMessage("Hello again! I'm picking up where we left off. Feel free to continue our conversation.", false);
+                
+                // Update the sessions panel
+                fetchSessions();
+                
+                // Optionally close the panel after selection
+                closeSessionsPanel();
+            } catch (error) {
+                console.error('Error switching sessions:', error);
+                appendMessage("Error switching to selected session.", false, true);
+            }
+        }
+
+        // Fetch response settings
+        async function fetchResponseSettings() {
+            try {
+                const response = await fetch('/response_settings');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    displayResponseSettings(data);
+                    updateLengthTooltip(data.response_lengths);
+                }
+            } catch (error) {
+                console.error('Failed to fetch response settings:', error);
+            }
+        }
+
+        function displayResponseSettings(settings) {
+            responseSettings.innerHTML = `
+                <p><strong>Model:</strong> ${settings.model_name || 'TinyLlama'}</p>
+                <p><strong>Max tokens:</strong> ${settings.max_tokens}</p>
+                <div class="response-lengths">
+                    <p><strong>Response lengths:</strong></p>
+                    <ul>
+                        ${Object.entries(settings.response_lengths)
+                          .filter(([key]) => key !== 'long') // Remove the 'long' option from the settings display
+                          .map(([key, desc]) => 
+                            `<li><strong>${key}:</strong> ${desc}</li>`
+                          ).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+
+        function updateLengthTooltip(lengthInfo) {
+            const tooltip = document.getElementById('lengthTooltip');
+            if (tooltip && lengthInfo) {
+                tooltip.innerHTML = `
+                    <strong>Response Lengths:</strong><br>
+                    - Short: ${lengthInfo.short}<br>
+                    - Medium: ${lengthInfo.medium}
+                `;
+            }
+        }
+
+        // Health check at intervals
+        const healthCheckInterval = setInterval(() => {
             if (modelLoaded) {
                 fetch('/status')
                     .then(res => res.json())
@@ -459,6 +885,11 @@
                     .catch(console.error);
             }
         }, 30000);
+
+        // Cleanup on page unload  
+        window.addEventListener('beforeunload', () => {
+            clearInterval(healthCheckInterval);
+        });
     </script>
 </body>
 </html>
